@@ -7,8 +7,9 @@ const port = process.env.PORT || 3000;
 app.get('/muscles/:exercise', async (req, res) => {
   try {
     // Call the OpenAI API
-    const response = await axios.post('https://api.openai.com/v1/engines/chat-davinci/jobs', {
-      prompt: `What muscles does ${req.params.exercise} work out?`,
+    const response = await axios.post('https://api.openai.com/v1/completions', {
+      prompt: `What are the muscle names for a ${req.params.exercise} work out?`,
+      model: "text-davinci-003",
       max_tokens: 128,
       n: 1,
       temperature: 0.5,
@@ -19,11 +20,17 @@ app.get('/muscles/:exercise', async (req, res) => {
       },
     });
 
-    // Parse the response from the API
-    const muscles = response.data.choices[0].text
-      .split('\n')
-      .filter(line => line.startsWith('- '))
-      .map(line => line.substr(2));
+    if (!response.data.choices || response.data.choices.length === 0) {
+      console.log(response.data.choices)
+      return res.status(500).json({ error: 'No information found' });
+    }
+
+    const text = response.data.choices[0].text;
+
+    // Split the text by '\n' and filter out empty strings
+    const muscles = text.split('\n')
+      .filter(line => line.trim() !== '')
+      .map(line => line.replace(/^\d+\.\s+/, '').trim());
 
     // Return the list of muscles worked out
     res.json({ muscles });
